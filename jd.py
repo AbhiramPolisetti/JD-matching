@@ -80,7 +80,7 @@ if uploaded_jd:
 
             col1, col2, col3 = st.columns([3, 1, 1])
             with col1:
-                st.write(f"{i}. 👤 **{candidate_name}** - 🏆 Score: {score * 100:.2f}%")")
+                st.write(f"{i}. 👤 **{candidate_name}** - 🏆 Score: {score * 100:.2f}%")
             with col2:
                 st.download_button(f"⬇️ Download", pdf_data, file_name=file_id, mime="application/pdf")
             with col3:
