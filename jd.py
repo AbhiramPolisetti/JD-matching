@@ -13,13 +13,13 @@ def load_model():
 
 model = load_model()
 
-# Load the Resume ID Mapping from CSV
-res_csv_path = "res_list.csv"  # Ensure this file is in the same directory
-if os.path.exists(res_csv_path):
-    res_df = pd.read_csv(res_csv_path)
-    resume_mapping = dict(zip(res_df["ID"], res_df["Name"]))  # Map IDs to candidate names
+# Load the JD ID Mapping from CSV
+csv_path = "pdf_list.csv"  # Ensure this file is in the same directory
+if os.path.exists(csv_path):
+    df = pd.read_csv(csv_path)
+    jd_mapping = dict(zip(df["ID"], df["JD"]))  # Map IDs to job names
 else:
-    resume_mapping = {}
+    jd_mapping = {}
 
 # Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
@@ -28,63 +28,63 @@ def extract_text_from_pdf(pdf_path):
     text = " ".join(page.get_text("text") for page in doc)
     return text.strip()
 
-# Find Top N Resume Matches
-def get_top_resumes(jd_pdf, resume_folder, top_n=5):
-    """Matches JD with resumes and returns the top N results."""
-    jd_text = extract_text_from_pdf(jd_pdf)
-    resume_texts, resume_files = [], []
+# Find Top N JD Matches
+def get_top_jds(resume_pdf, jd_folder, top_n=5):
+    """Matches resume with job descriptions and returns the top N results."""
+    resume_text = extract_text_from_pdf(resume_pdf)
+    jd_texts, jd_files = [], []
 
     # Match only against files listed in the CSV
-    for file_id in resume_mapping.keys():
-        file_path = os.path.join(resume_folder, file_id)
+    for file_id in jd_mapping.keys():
+        file_path = os.path.join(jd_folder, file_id)
         if os.path.exists(file_path):
-            resume_texts.append(extract_text_from_pdf(file_path))
-            resume_files.append(file_id)
+            jd_texts.append(extract_text_from_pdf(file_path))
+            jd_files.append(file_id)
 
     # Compute SBERT embeddings
-    jd_embedding = model.encode([jd_text], convert_to_numpy=True)
-    resume_embeddings = model.encode(resume_texts, convert_to_numpy=True)
+    resume_embedding = model.encode([resume_text], convert_to_numpy=True)
+    jd_embeddings = model.encode(jd_texts, convert_to_numpy=True)
 
     # Compute cosine similarity
-    similarities = cosine_similarity(jd_embedding, resume_embeddings)[0]
+    similarities = cosine_similarity(resume_embedding, jd_embeddings)[0]
 
     # Sort results by similarity score
-    scores = sorted(zip(resume_files, similarities), key=lambda x: x[1], reverse=True)
+    scores = sorted(zip(jd_files, similarities), key=lambda x: x[1], reverse=True)
     return scores[:top_n]
 
 # Streamlit UI
-st.title("📑 Recruit")
+st.title("📄 Find Jobs")
 
-uploaded_jd = st.file_uploader("📤 Upload Job Description (PDF)", type=["pdf"])
-resume_folder = "resume_db"  # Folder containing resumes
+uploaded_resume = st.file_uploader("📤 Upload Resume (PDF)", type=["pdf"])
+jd_folder = "JD_db"  # Folder containing job descriptions
 
-if uploaded_jd:
-    if not resume_mapping:
-        st.error("⚠️ No resumes found! Please upload 'res_list.csv' and ensure resume files exist.")
+if uploaded_resume:
+    if not jd_mapping:
+        st.error("⚠️ No job descriptions found! Please upload 'pdf_list.csv' and ensure JD files exist.")
     else:
-        top_n = st.slider("🔢 Select Number of Resume Matches:", 1, min(10, len(resume_mapping)), 5)
+        top_n = st.slider("🔢 Select Number of Job Matches:", 1, min(10, len(jd_mapping)), 5)
 
-        temp_jd_path = "temp_jd.pdf"
-        with open(temp_jd_path, "wb") as f:
-            f.write(uploaded_jd.getbuffer())
+        temp_resume_path = "temp_resume.pdf"
+        with open(temp_resume_path, "wb") as f:
+            f.write(uploaded_resume.getbuffer())
 
-        matches = get_top_resumes(temp_jd_path, resume_folder, top_n)
+        matches = get_top_jds(temp_resume_path, jd_folder, top_n)
 
-        st.write("### ✅ Top Matching Candidates:")
+        st.write("### ✅ Top Matching Job Descriptions:")
         for i, (file_id, score) in enumerate(matches, 1):
-            candidate_name = resume_mapping.get(file_id, "Unknown Candidate")  # Get candidate name from CSV
-            file_path = os.path.join(resume_folder, file_id)
+            job_name = jd_mapping.get(file_id, "Unknown Job")  # Get job name from CSV
+            file_path = os.path.join(jd_folder, file_id)
 
             with open(file_path, "rb") as pdf_file:
                 pdf_data = pdf_file.read()
 
             col1, col2, col3 = st.columns([3, 1, 1])
             with col1:
-                st.write(f"{i}. 👤 **{candidate_name}** - 🏆 Score: {round(score * 100, 2)}%")
+                st.write(f"{i}. 📄 **{job_name}** - 🏆 Score: {round(score * 100, 2)}%")
             with col2:
                 st.download_button(f"⬇️ Download", pdf_data, file_name=file_id, mime="application/pdf")
             with col3:
-                contact_link = "http://localhost:5173/chats"  # Example contact link
-                st.markdown(f"[📩 Contact]( {contact_link} )", unsafe_allow_html=True)
+                apply_link = f"http://localhost:5173/projects/{file_id.replace('.pdf', '')}"  # Example job application link
+                st.markdown(f"[🚀 Apply]( {apply_link} )", unsafe_allow_html=True)
 
-        os.remove(temp_jd_path)
+        os.remove(temp_resume_path)
