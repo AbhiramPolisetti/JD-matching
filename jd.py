@@ -62,6 +62,18 @@ if uploaded_jd:
 
         st.write("### ✅ Top Matching Resumes:")
         for i, (file, score) in enumerate(matches, 1):
-            st.write(f"{i}. 📄 **{file}** - 🏆 Score: {round(score * 100, 2)}%")
+            file_path = os.path.join(resume_folder, file)
+
+            with open(file_path, "rb") as pdf_file:
+                pdf_data = pdf_file.read()
+
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"{i}. 📄 **{file}** - 🏆 Score: {round(score * 100, 2)}%")
+            with col2:
+                st.download_button(f"⬇️ Download", pdf_data, file_name=file, mime="application/pdf")
+            with col3:
+                contact_link = f"https://www.linkedin.com/in/{file.replace('.pdf', '')}"  
+                st.markdown(f"[📩 Contact]( {contact_link} )", unsafe_allow_html=True)
 
         os.remove(temp_jd_path)
