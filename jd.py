@@ -53,7 +53,7 @@ def get_top_resumes(jd_pdf, resume_folder, top_n=5):
     return scores[:top_n]
 
 # Streamlit UI
-st.title("📑Recruit")
+st.title("📑 Find Candidates")
 
 uploaded_jd = st.file_uploader("📤 Upload Job Description (PDF)", type=["pdf"])
 resume_folder = "resume_db"  # Folder containing resumes
@@ -84,7 +84,7 @@ if uploaded_jd:
             with col2:
                 st.download_button(f"⬇️ Download", pdf_data, file_name=file_id, mime="application/pdf")
             with col3:
-                contact_link = "http://localhost:513/chats"  # Default chat link
+                contact_link = "http://localhost:5173/chats"  # Default chat link
                 st.markdown(f"[📩 Contact]( {contact_link} )", unsafe_allow_html=True)
 
         os.remove(temp_jd_path)
