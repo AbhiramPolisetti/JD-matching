@@ -14,12 +14,12 @@ def load_model():
 model = load_model()
 
 # Load the Resume ID Mapping from CSV
-csv_path = "res_list.csv"  # Ensure this file is in the same directory
-if os.path.exists(csv_path):
-    df = pd.read_csv(csv_path)
-    res_mapping = dict(zip(df["ID"], df["NAME"]))  # Map IDs to candidate names
+res_csv_path = "res_list.csv"  # Ensure this file is in the same directory
+if os.path.exists(res_csv_path):
+    res_df = pd.read_csv(res_csv_path)
+    resume_mapping = dict(zip(res_df["ID"], res_df["Name"]))  # Map IDs to candidate names
 else:
-    res_mapping = {}
+    resume_mapping = {}
 
 # Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
@@ -30,12 +30,12 @@ def extract_text_from_pdf(pdf_path):
 
 # Find Top N Resume Matches
 def get_top_resumes(jd_pdf, resume_folder, top_n=5):
-    """Matches job description with resumes and returns the top N results."""
+    """Matches JD with resumes and returns the top N results."""
     jd_text = extract_text_from_pdf(jd_pdf)
     resume_texts, resume_files = [], []
 
     # Match only against files listed in the CSV
-    for file_id in res_mapping.keys():
+    for file_id in resume_mapping.keys():
         file_path = os.path.join(resume_folder, file_id)
         if os.path.exists(file_path):
             resume_texts.append(extract_text_from_pdf(file_path))
@@ -53,16 +53,16 @@ def get_top_resumes(jd_pdf, resume_folder, top_n=5):
     return scores[:top_n]
 
 # Streamlit UI
-st.title("📄 Find Candidates")
+st.title("📑Recruit")
 
 uploaded_jd = st.file_uploader("📤 Upload Job Description (PDF)", type=["pdf"])
 resume_folder = "resume_db"  # Folder containing resumes
 
 if uploaded_jd:
-    if not res_mapping:
+    if not resume_mapping:
         st.error("⚠️ No resumes found! Please upload 'res_list.csv' and ensure resume files exist.")
     else:
-        top_n = st.slider("🔢 Select Number of Resume Matches:", 1, min(10, len(res_mapping)), 5)
+        top_n = st.slider("🔢 Select Number of Resume Matches:", 1, min(10, len(resume_mapping)), 5)
 
         temp_jd_path = "temp_jd.pdf"
         with open(temp_jd_path, "wb") as f:
@@ -70,9 +70,9 @@ if uploaded_jd:
 
         matches = get_top_resumes(temp_jd_path, resume_folder, top_n)
 
-        st.write("### ✅ Top Matching Resumes:")
+        st.write("### ✅ Top Matching Candidates:")
         for i, (file_id, score) in enumerate(matches, 1):
-            candidate_name = res_mapping.get(file_id, "Unknown Candidate")  # Get name from CSV
+            candidate_name = resume_mapping.get(file_id, "Unknown Candidate")  # Get candidate name from CSV
             file_path = os.path.join(resume_folder, file_id)
 
             with open(file_path, "rb") as pdf_file:
@@ -84,7 +84,7 @@ if uploaded_jd:
             with col2:
                 st.download_button(f"⬇️ Download", pdf_data, file_name=file_id, mime="application/pdf")
             with col3:
-                contact_link = "http://localhost:513/chats"  # Default contact page
+                contact_link = "http://localhost:513/chats"  # Default chat link
                 st.markdown(f"[📩 Contact]( {contact_link} )", unsafe_allow_html=True)
 
         os.remove(temp_jd_path)
